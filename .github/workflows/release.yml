@@ -29,7 +29,7 @@ jobs:
       - name: Create GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create $VERSION --draft --title $VERSION
+        run: gh release create $VERSION --title $VERSION
     outputs:
       version: ${{ env.VERSION }}
 
@@ -110,8 +110,8 @@ jobs:
       run: |
         mkdir -p "$ARCHIVE"/{complete,doc}
         cp "$BIN" "$ARCHIVE"/
-        cp {README.md,COPYING,UNLICENSE,LICENSE-MIT} "$ARCHIVE"/
-        cp {CHANGELOG.md,FAQ.md,GUIDE.md} "$ARCHIVE"/doc/
+        # Hanya menyalin README.md (pastikan file ini ada di root repo Anda)
+        if [ -f "README.md" ]; then cp README.md "$ARCHIVE"/; fi
 
     - name: Generate man page and completions (no emulation)
       if: matrix.qemu == ''
@@ -132,6 +132,12 @@ jobs:
         certutil -hashfile "$ARCHIVE.zip" SHA256 > "$ARCHIVE.zip.sha256"
         echo "ASSET=$ARCHIVE.zip" >> $GITHUB_ENV
         echo "ASSET_SUM=$ARCHIVE.zip.sha256" >> $GITHUB_ENV
+
+    - name: Upload to Actions Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.ARCHIVE }}
+        path: ${{ env.ASSET }}
 
     - name: Upload release archive
       env:
