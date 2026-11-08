@@ -11,7 +11,7 @@ on:
 # `schedule` event. By specifying any permission explicitly all others are set
 # to none. By using the principle of least privilege the damage a compromised
 # workflow can do (because of an injection or compromised third party tool or
-# action) is restricted. Currently the worklow doesn't need any additional
+# action) is restricted. Currently the workflow doesn't need any additional
 # permission except for pulling the code. Adding labels to issues, commenting
 # on pull-requests, etc. may need additional permissions:
 #
@@ -53,7 +53,7 @@ jobs:
         include:
         - build: pinned
           os: ubuntu-latest
-          rust: 1.85.0
+          rust: 1.96.0
         - build: stable
           os: ubuntu-latest
           rust: stable
@@ -123,6 +123,16 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         ci/ubuntu-install-packages
+
+    # Docker 29.4.2 on Ubuntu 26.04 blocks socketcall, which cross's
+    # 32-bit glibc needs for process spawning. Fixed in Docker 29.4.3.
+    # https://github.com/actions/runner-images/issues/14790
+    - name: Update Docker (32-bit Linux)
+      if: matrix.target == 'i686-unknown-linux-gnu'
+      uses: docker/setup-docker-action@v5
+      with:
+        version: latest
+        set-host: true
 
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
@@ -241,6 +251,19 @@ jobs:
         env:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc --no-deps --document-private-items --workspace
+
+  benches:
+    name: Test benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+      - name: Test ignore benchmarks
+        run: cargo +nightly test -p ignore --benches
 
   fuzz_testing:
     name: Compile Fuzz Test Targets

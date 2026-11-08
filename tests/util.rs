@@ -177,7 +177,11 @@ impl Dir {
 
     /// Returns the path to the ripgrep executable.
     pub fn bin(&self) -> process::Command {
-        let rg = self.root.join(format!("../rg{}", env::consts::EXE_SUFFIX));
+        let rg = std::env::var_os("CARGO_BIN_EXE_rg")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                self.root.join(format!("../rg{}", env::consts::EXE_SUFFIX))
+            });
         match cross_runner() {
             None => process::Command::new(rg),
             Some(runner) => {
@@ -271,6 +275,16 @@ impl TestCommand {
         A: AsRef<OsStr>,
     {
         self.cmd.args(args);
+        self
+    }
+
+    /// Set an environment variable for this command.
+    pub fn env(
+        &mut self,
+        key: impl AsRef<OsStr>,
+        val: impl AsRef<OsStr>,
+    ) -> &mut TestCommand {
+        self.cmd.env(key, val);
         self
     }
 
